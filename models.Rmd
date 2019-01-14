@@ -219,7 +219,7 @@ newdata1$rankP <- predict(mylogit, newdata = newdata1, type = "response")
 newdata1
 
 
-confusionMatrix(testData$ABOVE50K, predicted, threshold = optCutOff)
+confusionMatrix(testData$ABOVE50K, predicted, threshold = optCutOff) 
 
 
 
