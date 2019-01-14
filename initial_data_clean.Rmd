@@ -1,0 +1,524 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+setwd("/Users/nikhilsharma/Downloads/research_new")
+full <- read_csv("regular_season_players.csv")
+View(full)
+```
+
+```{r}
+setwd("/Users/nikhilsharma/Downloads/research_new") ##was resetting working directory for some reason
+abbreviations <- read_csv("team_abbrev_full.csv")
+head(abbreviations)
+```
+
+```{r}
+full$tm[full$tm == "KCK"] <- "SAC"
+full$tm[full$tm == "NJN"] <- "BRK"
+full$tm[full$tm == "SDC"] <- "LAC"
+full$tm[full$tm == "SEA"] <- "OKC"
+full$tm[full$tm == "WSB"] <- "WAS"
+full$tm[full$tm == "VAN"] <- "MEM"
+full$tm[full$tm == "NOH"] <- "NOP"
+full$tm[full$tm == "CHA"] <- "CHO"
+full$tm[full$tm == "CHH"] <- "CHO"
+full$tm[full$tm == "NOK"] <- "NOP"
+#View(full)
+```
+
+```{r}
+unique(full$tm)
+```
+looks good, 30 teams + TOT
+
+```{r}
+library(dplyr)
+n <- full %>% group_by(i, tm) %>% summarise(high = max(ws), n = n()) ##find players with highest ws on every team from every season
+View(n)
+```
+
+```{r}
+n <- n %>% filter(tm != "TOT") ##take out traded players fpr now
+#View(n)
+```
+
+```{r}
+colnames(n)[3] <- "ws"
+n <- n[,-4]
+highest_ws <- merge(full, n, by=c("i", "tm", "ws"), all.y=TRUE) ##merge back to get all player stats for those w/ highest ws
+```
+
+```{r}
+library(stringr) ##clean up * from names
+highest_ws$player <- str_replace_all(highest_ws$player, "\\*", "") 
+full$player <- str_replace_all(full$player, "\\*", "") 
+```
+
+```{r}
+#View(full)
+View(highest_ws)
+```
+
+
+```{r}
+datalist = list() 
+
+for (j in 1:nrow(highest_ws)) { ##get career stats for players in highest_ws dataframe
+ 
+    
+    player <- filter(full, player==highest_ws[j,6])
+  
+    datalist[[j]] <- player 
+    
+    
+  
+    
+}
+
+big_data = do.call(rbind, datalist)
+
+highest_ws_careers <- big_data[!duplicated(big_data),]
+```
+
+```{r}
+player_choices <- unique(highest_ws_careers$player)
+str(player_choices)
+```
+
+412 players in dataset
+
+```{r}
+datalist = list()
+datalist2 = list()
+datalist3 = list()
+n <- 1
+
+
+for (o in 1:length(player_choices)){
+  
+  player <- filter(highest_ws_careers, player==player_choices[o])
+  
+  #View(player)
+
+  
+
+  
+  for (i in 1:nrow(player)){
+    if (player[i, 6] == "TOT"){
+      year <- as.numeric(player[i, 50]) ##grabs year of tot season
+    
+      year_teams <- filter(player, i == year) ##grabs the 3 targeted rows
+
+      tot_row_index <- which(year_teams$tm == "TOT")
+    
+      y <- which(grepl(year-1, player$i))
+
+      team <- as.character(player[y,6])
+
+      year_teams[tot_row_index, 6] <- team
+      year_teams <- year_teams[tot_row_index,]
+
+      datalist[[i]] <- year_teams
+    
+    
+      datalist2[[n]] <- year_teams
+      n <- n+1
+    }
+  
+    else {datalist[[i]] <- player[i,]}
+  
+
+  
+
+    sample <- bind_rows(datalist)
+    newww <- bind_rows(datalist2)
+    newww <- as.data.frame(newww)
+
+
+    if (nrow(newww) != 0) {
+
+        for (k in 1:nrow(newww)){   
+  
+          x <- as.numeric(newww[k, 50])
+
+          sample[sample$i == x,] <- newww[j,]
+        }
+    }
+
+  sample <- distinct(sample)
+
+    
+    
+  }
+  
+  datalist3[[o]] <- sample
+}
+
+
+candidates_new <- bind_rows(datalist3)
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+allSame <- function(x) length(unique(x)) == 1
+```
+
+```{r}
+datalist = list()
+
+for (j in 1:length(player_choices)){ ##finding the players who left their teams at some point in their careers
+   player <- filter(highest_ws_careers, player == player_choices[j])
+  
+  if (allSame(player$tm) == FALSE){
+    datalist[[j]] <- player 
+  }
+  
+}
+
+left_team = do.call(rbind, datalist)
+```
+
+```{r}
+candidates <- unique(left_team$player)
+str(candidates)
+```
+348 candidates
+
+```{r}
+datalist = list()
+
+for (p in 1:nrow(highest_ws)){
+
+  x <- which(full$i == (highest_ws[p,1] + 1) & full$player == highest_ws[p,6]) ##pulling the next year of players w/ highest ws; which year is the next year, player is the same
+
+  player <- full[x,]
+
+  datalist[[p]] <- player
+}
+
+
+highest_ws_next_year <- bind_rows(datalist)
+#View(highest_ws_next_year)
+```
+
+dataset reduced in rows bc we dont know the next season for players w/ highest ws in 2018 yet
+
+
+```{r}
+team_stats <- read_csv("team_stats_with_codes.csv")
+#View(team_stats)
+```
+
+```{r}
+team_stats$Percentage <- team_stats$W / (team_stats$W + team_stats$L)
+names(team_stats)[52] <- "tm"
+#View(team_stats)
+```
+
+
+
+
+
+
+
+
+```{r}
+candidates_with_teams <- merge(left_team, team_stats, by=c("i", "tm"))
+#View(candidates_with_teams)
+```
+
+
+
+
+```{r}
+deron <- filter(left_team, player == "Deron Williams")
+#View(deron)
+```
+
+
+```{r}
+players <- unique(candidates_with_teams$player)
+str(players)
+```
+
+
+
+```{r}
+datalist = list()
+datalist2 = list()
+n <- 1
+
+
+
+for (i in 1:nrow(deron)){
+  if (deron[i, 6] == "TOT"){
+    year <- as.numeric(deron[i, 50]) ##grabs year of tot season
+    
+    year_teams <- filter(deron, i == year) ##grabs the 3 targeted rows
+
+    tot_row_index <- which(year_teams$tm == "TOT")
+    
+    y <- which(grepl(year-1, deron$i))
+
+    team <- as.character(deron[y,6])
+
+    year_teams[tot_row_index, 6] <- team
+    year_teams <- year_teams[tot_row_index,]
+
+    datalist[[i]] <- year_teams
+    
+    
+    datalist2[[n]] <- year_teams
+    n <- n+1
+  }
+  
+  else {datalist[[i]] <- deron[i,]}
+  
+
+  
+
+}
+
+sample <- bind_rows(datalist)
+newww <- bind_rows(datalist2)
+
+
+for (j in 1:nrow(newww)){
+  
+  x <- as.numeric(newww[j, 50])
+
+  sample[sample$i == x,] <- newww[j,]
+}
+
+sample <- distinct(sample)
+
+View(sample)
+```
+
+
+
+```{r}
+datalist = list()
+datalist2 = list()
+datalist3 = list()
+n <- 1
+
+
+for (y in 1:length(players)){
+  
+  player <- filter(candidates_with_teams, player==players[y])
+  
+  #View(player)
+
+  for (i in 1:nrow(player)){
+    if (player[i, 6] == "TOT"){
+      year <- as.numeric(player[i, 1]) ##grabs year of tot season
+    
+      year_teams <- filter(player, i == year) ##grabs the 3 targeted rows
+
+      tot_row_index <- which(year_teams$tm == "TOT")
+    
+      y <- which(grepl(year-1, player$i))
+
+      team <- as.character(player[y,6])
+
+      year_teams[tot_row_index, 6] <- team
+      year_teams <- year_teams[tot_row_index,]
+
+      datalist[[i]] <- year_teams
+    
+    
+      datalist2[[n]] <- year_teams
+      n <- n+1
+    }
+  
+    else {datalist[[i]] <- player[i,]}
+  
+
+  
+
+  }
+
+    sample <- bind_rows(datalist)
+    newww <- bind_rows(datalist2)
+
+
+      for (j in 1:nrow(newww)){
+  
+        x <- as.numeric(newww[j, 50])
+
+        sample[sample$i == x,] <- newww[j,]
+    }
+
+    sample <- distinct(sample)
+
+    
+    datalist[[y]] <- sample
+    
+}
+
+
+candidates_new <- bind_rows(datalist3)
+```
+
+
+
+
+
+```{r}
+players <- unique(candidates_with_teams$player)
+str(players)
+```
+
+
+
+```{r}
+datalist = list()
+
+z <- 1
+
+for (y in 1:length(players)){
+  
+  only_player <- filter(candidates_with_teams, player==players[y]) ##look at one player at a time
+  
+  if (nrow(only_player) > 1){ ##if they only have one season in the dataset, couldnt have changed teams
+    for (x in 2:nrow(only_player)){ ##look at next season
+      if(only_player[x,2] != only_player[x-1, 2]){ ##if previous season's team isn't same...
+        datalist[[z]] <- only_player[(x-1),] ##populate the datalist with the year he left
+        z <- z+1
+        
+      }
+      
+    }
+  
+  }
+  
+}
+
+year_left <- bind_rows(datalist)
+View(year_left)
+```
+
+
+
+```{r}
+players2 <- unique(year_left$player)
+players2
+```
+
+
+ ```{r}
+datalist = list()
+
+z <- 1
+
+
+for (y in 1:length(players2)){
+  
+  only_player <- filter(year_left, player==players2[y]) ##look at one player at a time
+  
+    if (nrow(only_player) > 1){ ##if they only have one season in the dataset, couldnt have changed teams
+      
+      if (nrow(only_player) == 2){
+        if(only_player[2,2] == only_player[1, 2]){ ##if previous season's team isn't same...
+          only_player <- only_player[-1,]}
+      }
+      
+      if (nrow(only_player > 2))  {
+      for (x in 2:nrow(only_player)){ ##look at next season
+      
+        if(only_player[x,2] == only_player[x-1, 2]){ ##if previous season's team isn't same...
+          only_player <- only_player[-(x-1),]}
+      
+      
+      }
+        
+        
+        datalist[[z]] <- only_player ##populate the datalist with the year he left
+        z <- z+1
+        
+      
+      }
+    }
+  
+  }
+  
+year_left2 <- bind_rows(datalist)
+View(year_left2)
+```
+
+
+```{r}
+year_left$next_season <- year_left$i + 1
+#View(year_left)
+next_year <- select(year_left, tm, next_season)
+#View(next_year)
+#last_season <- select(new_years, i, new_tm, Percentage)
+```
+
+```{r}
+win_pcts <- select(team_stats, tm, i, Percentage)
+names(win_pcts)[2] <- "next_season"
+#View(win_pcts)
+```
+
+```{r}
+next_year_w_percents <- merge(win_pcts, next_year, by=c("tm", "next_season"), all.y=TRUE)
+#View(next_year_w_percents)
+```
+
+```{r}
+candidates_df <- merge(year_left, next_year_w_percents, by=c("tm", "next_season"), all.x=TRUE)
+#View(candidates_df)
+```
+
+```{r}
+candidates_df <- distinct(candidates_df)
+#View(candidates_df)
+```
+
+```{r}
+candidates_df$EWING <- ifelse (candidates_df$Percentage.x < candidates_df$Percentage.y, 1,
+                       ifelse (candidates_df$Percentage.x > candidates_df$Percentage.y, 0, 
+                       ifelse (candidates_df$Percentage.x == candidates_df$Percentage.y, 1, NA)))
+```
+
+```{r}
+#View(candidates_df)
+```
+
+```{r}
+write.csv(candidates_df, file="candidates_denoted2.csv")
+```
+

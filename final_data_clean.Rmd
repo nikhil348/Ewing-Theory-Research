@@ -1,0 +1,316 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("/Users/nikhilsharma/Downloads")
+#setwd("C:/Users/nsharma/Downloads")
+library(readr)
+data <- read_csv("candidates_denoted2.csv")
+View(data)
+```
+
+```{r}
+dim(data)
+```
+
+```{r}
+library(dplyr)
+data <- data %>% filter(mp_per_game > 24) %>% filter(i != 2018)
+#View(data)
+```
+
+```{r}
+(data[is.na(data$EWING),])
+```
+
+
+```{r}
+data[is.na(data$Percentage.y),]
+```
+
+```{r}
+which(is.na(data$Percentage.y))
+```
+
+```{r}
+data[143:146,104] <- 47/82
+sum(is.na(data$Percentage.y))
+```
+
+```{r}
+data$EWING <- ifelse (data$Percentage.x < data$Percentage.y, 1,
+            ifelse (data$Percentage.x == data$Percentage.y, 1,
+            ifelse (data$Percentage.x > data$Percentage.y, 0, NA)))
+sum(is.na(data$EWING))
+```
+
+
+```{r}
+data <- data[,-11] ##games started
+#View(data)
+```
+
+```{r}
+data <- data[,c(-75:-77)] ##arena and attendance stuff
+#View(data)
+```
+
+```{r}
+data$x3ppercent[is.na(data$x3ppercent)] <- 0
+```
+
+
+```{r}
+na <- data[!complete.cases(data), ]
+na ##epty dataset; no more NAs
+```
+
+
+```{r}
+colnames(data) <- make.names(colnames(data))
+```
+
+```{r}
+data <- data[,c(-1, -6, -52, -54, -55, -75)] ##rks and X1s
+```
+
+```{r}
+data[,c(36:42, 66:67, 69)] <- data[,c(36:42, 66:67, 69)] / 100
+```
+
+```{r}
+data <- data[,c(-45, -46)] ##ws, ws_48
+```
+
+```{r}
+data <- data[,c(-50:-56)] ##W, L, PW, PL, SOS, SRS, MOV
+```
+
+
+```{r}
+#View(data)
+```
+
+```{r}
+#library(binaryLogic)
+data$pos <- as.factor(data$pos)
+data$EWING <- as.factor(data$EWING)
+#data$EWING <- as.binary(data$EWING)
+#data$EWING <- unlist(data$EWING)
+str(data)
+```
+
+
+```{r}
+library(corrplot)
+M <- cor(data[,7:47])
+N <- cor(data[,49:83])
+corrplot(M, method = "circle", type="upper")
+corrplot(N, method = "circle", type="upper")
+```
+
+```{r}
+library(caret)
+numbers <- data[,c(7:47, 49:83)]
+df <- cor(data[,c(7:47, 49:83)])
+high <- findCorrelation(df, cutoff=0.7) 
+high <- sort(high)
+high
+reduced_Data <- numbers[,-c(high)]
+View(reduced_Data)
+```
+
+```{r}
+dim(reduced_Data)
+```
+
+
+```{r}
+M <- cor(reduced_Data)
+corrplot(M, method = "circle", type="upper")
+```
+
+```{r}
+min(M)
+```
+
+
+
+
+```{r}
+#reduced_Data <- reduced_Data[,c(-3, -6, -8, -22, -38)]
+```
+
+```{r}
+#reduced_Data <- reduced_Data[,c(-25:-27, -31:-33)]
+```
+
+
+```{r}
+#reduced_Data <- reduced_Data[,c(-2, -3, -7, -8, -10, -11, -25)]
+```
+
+
+```{r}
+reduced_Data <- cbind.data.frame(reduced_Data, data$pos)
+reduced_Data <- cbind.data.frame(reduced_Data, data$EWING)
+```
+
+```{r}
+names(reduced_Data)[38] <- "pos"
+names(reduced_Data)[39] <- "EWING"
+```
+
+```{r}
+#View(reduced_Data)
+```
+
+```{r}
+reduced_Data <- cbind.data.frame(data$i, reduced_Data)
+reduced_Data <- cbind.data.frame(data$tm, reduced_Data)
+reduced_Data <- cbind.data.frame(data$player, reduced_Data)
+```
+
+```{r}
+names(reduced_Data) [1:3] <- c("Player", "Team", "Year")
+```
+
+```{r}
+write.csv(reduced_Data, file="final_data.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+set.seed(123)
+sample <- sample(c(TRUE, FALSE), nrow(reduced_Data), replace = T, prob = c(0.75,0.25))
+train <- reduced_Data[sample,] #Model training Dataset
+test <- reduced_Data[!sample,] #Model test Datase
+```
+
+```{r}
+train
+```
+
+
+
+```{r}
+library(tree)
+tree.ewing <- tree(EWING ~ ., data=train)
+```
+
+pos + age + g + mp + per + tspercent +  x3par + ftr + orbpercent + drbpercent + trbpercent + astpercent + stlpercent + blkpercent + tovpercent + usgpercent + ows + dws + ws + ws_48 + obpm  + dbpm + bpm + vorp
+
+
+```{r}
+summary(tree.ewing)
+```
+
+```{r}
+plot(tree.ewing)
+text(tree.ewing, pretty = 0)
+```
+
+```{r}
+tree.pred <- predict(tree.ewing, test, type="class")
+```
+
+```{r}
+library(randomForest)
+forest.ewing <- randomForest(as.factor(EWING) ~ ., data=train, type=class)
+```
+
+```{r}
+forest.ewing
+```
+
+```{r}
+str(forest.ewing)
+```
+
+```{r}
+plot(forest.ewing)
+```
+
+```{r}
+varImpPlot(forest.ewing,  sort = T, n.var=10 )
+```
+
+```{r}
+predict()
+```
+
+
+
+
+
+```{r}
+forest.ewing.2 <- randomForest(EWING.y ~ pos + age + g + mp + per + tspercent +  x3par + ftr + orbpercent + drbpercent + trbpercent + astpercent + stlpercent + blkpercent + tovpercent + usgpercent + ows + dws + ws + ws_48 + obpm  + dbpm + bpm + vorp , data=train, mtry=200)
+forest.ewing.2
+```
+
+```{r}
+oob.err=double(24)
+test.err=double(24)
+
+
+for(i in 1:24) {
+rf <- randomForest (EWING.y ~ pos + age + g + mp + per + tspercent +  x3par + ftr + orbpercent + drbpercent + trbpercent + astpercent + stlpercent + blkpercent + tovpercent + usgpercent + ows + dws + ws + ws_48 + obpm  + dbpm + bpm + vorp , data=train, mtry=i, ntree=500) 
+
+oob.err[i] <- rf$err.rate[500] 
+  
+pred <- predict(rf, test) 
+test.err[i]= with(test, mean( (as.numeric(EWING.y) - as.numeric(pred))^2)) 
+  
+cat(i," ") 
+  
+}
+```
+
+```{r}
+oob.err
+```
+
+```{r}
+test.err
+```
+
+```{r}
+forest.ewing.3 <- randomForest(EWING.y ~ pos + age + g + mp + per + tspercent +  x3par + ftr + orbpercent + drbpercent  + astpercent + stlpercent + blkpercent + tovpercent + usgpercent + ows + dws + obpm  + dbpm  + vorp , data=train)
+forest.ewing.3
+```
+
+
+
+
+
+

@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rvest)
+library(dplyr)
+
+
+datalist = list()
+
+for (i in 1980:2018){
+
+  main <- "https://widgets.sports-reference.com/wg.fcgi?css=1&site=bbr&url=%2Fleagues%2FNBA_"
+  tail <- ".html&div=div_misc_stats"
+
+  url <- paste0(main, i, tail)
+
+
+  #url <- "https://widgets.sports-reference.com/wg.fcgi?css=1&site=bbr&url=%2Fleagues%2FNBA_2018.html&div=div_misc_stats"
+  first <- url %>%
+    read_html() %>%
+      html_table()
+  
+  
+  
+  first <- first[[1]]
+  names(first) <- as.character(unlist(first[1,]))
+  first <- first[-1,]
+
+
+  
+  
+  
+  tail2 <- ".html&div=div_team-stats-per_game"
+
+  url2 <- paste0(main, i, tail2)
+
+  #url <- "https://widgets.sports-reference.com/wg.fcgi?css=1&site=bbr&url=%2Fleagues%2FNBA_2018.html&div=div_team-stats-per_game"
+  second <- url2 %>%
+    read_html() %>%
+      html_table()
+  
+  
+  second <- second[[1]]
+
+
+
+  all <- merge(first, second, by = "Team")
+
+  all$i <- i
+  datalist[[i]] <- all
+
+}
+
+teams_seasons <- bind_rows(datalist)
+View(teams_seasons)
+```
+
+```{r}
+write.csv(teams_seasons, file="team_seasons.csv")
+```
+
+
+widgets.sports-reference.com/wg.fcgi?css=1&site=bbr&url=%2Fleagues%2FNBA_2018.html&div=div_team-stats-per_game
+
+
+
+
+widgets.sports-reference.com/wg.fcgi?css=1&site=bbr&url=%2Fleagues%2FNBA_2018.html&div=div_misc_stats
+
+

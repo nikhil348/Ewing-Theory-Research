@@ -1,0 +1,225 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("/Users/nikhilsharma/Downloads/research_new")
+library(readr)
+data <- read_csv("final_data.csv")
+```
+
+```{r}
+table(data$EWING)
+```
+
+
+```{r}
+str(data)
+```
+
+```{r}
+library(binaryLogic)
+data$pos <- as.factor(data$pos)
+data$EWING <- as.factor(data$EWING)
+#data$EWING <- as.binary(data$EWING)
+#data$EWING <- unlist(data$EWING)
+str(data)
+```
+
+```{r}
+set.seed(123)
+sample <- sample(c(TRUE, FALSE), nrow(data), replace = T, prob = c(0.75,0.25))
+train <- data[sample,] #Model training Dataset
+test <- data[!sample,] #Model test Datase
+```
+
+
+```{r}
+colnames(data)
+```
+
+
+
+
+```{r}
+library(tree)
+tree.ewing <- tree(EWING ~ age + g + mp_per_game + x3pa + x3ppercent + efgpercent + ftpercent + ast + tov + pf + per + ftr + drbpercent + stlpercent + blkpercent + tovpercent + usgpercent + dws + dbpm + vorp + Age + ORtg + FTr + eFG. + ORB. + FT.FGA + G + MP + FGA + X3P. + FT. + DRB + TRB + AST + STL + BLK + TOV + pos, data=train)
+```
+
+```{r}
+summary(tree.ewing)
+```
+
+```{r}
+plot(tree.ewing)
+text(tree.ewing, pretty = 0)
+```
+```{r}
+predict(tree.ewing, test)
+```
+
+
+
+```{r}
+x <- predict(tree.ewing, test)
+x <- as.data.frame(x)
+View(x)
+```
+
+```{r}
+test <- cbind(test, x)
+View(test)
+```
+
+```{r}
+names(test)[45] <- "pred"
+test <- test[,-44]
+```
+
+```{r}
+test$pred <- round(test$pred)
+```
+
+
+```{r}
+test$Accuracy <- ifelse (test$EWING == test$pred, TRUE,
+                 ifelse (test$EWING != test$pred, FALSE,NA))
+```
+
+```{r}
+table(test$Accuracy)
+```
+
+
+```{r}
+142 / (142+75)
+```
+
+
+
+
+```{r}
+library(randomForest)
+forest.ewing <- randomForest(EWING ~ age + g + mp_per_game + x3pa + x3ppercent + efgpercent + ftpercent + ast + tov + pf + per + ftr + drbpercent + stlpercent + blkpercent + tovpercent + usgpercent + dws + dbpm + vorp + Age + ORtg + FTr + eFG. + ORB. + FT.FGA + G + MP + FGA + X3P. + FT. + DRB + TRB + AST + STL + BLK + TOV + pos, data=train, type=class)
+```
+
+```{r}
+forest.ewing
+```
+
+```{r}
+plot(forest.ewing)
+```
+
+```{r}
+varImpPlot(forest.ewing, sort = T, n.var=10 )
+```
+
+```{r}
+test2 <- test
+```
+
+```{r}
+test2.pred <- predict(forest.ewing, test2)
+test2.pred
+```
+
+```{r}
+test2 <- cbind(test2, test2.pred)
+View(test2)
+```
+
+```{r}
+test2 <- test2[,-c(44:47)]
+```
+
+```{r}
+test2$Accuracy <- ifelse (test2$EWING == test2$test2.pred, TRUE,
+                 ifelse (test2$EWING != test2$test2.pred, FALSE,NA))
+```
+
+```{r}
+table(test2$Accuracy)
+```
+
+```{r}
+167 / (167+ 50)
+```
+
+
+```{r}
+test3 <- test
+test3 <- test3[,-44:-45]
+#View(test3)
+```
+
+```{r}
+log.ewing <- glm(EWING ~ age + g + mp_per_game + x3pa + x3ppercent + efgpercent + ftpercent + ast + tov + pf + per + ftr + drbpercent + stlpercent + blkpercent + tovpercent + usgpercent + dws + dbpm + vorp + Age + ORtg + FTr + eFG. + ORB. + FT.FGA + G + MP + FGA + X3P. + FT. + DRB + TRB + AST + STL + BLK + TOV + pos, data=train, family="binomial")
+```
+
+```{r}
+summary(log.ewing)
+```
+
+```{r}
+anova(log.ewing, test="Chisq")
+```
+
+age, g, mp_per_game, x3pa, ftpercent, per, usgpercent, dws, Age, ORtng, eFG., FT.FGA (foul rate), X3P., TOV
+
+```{r}
+library(MASS)
+step.model <- stepAIC(log.ewing, direction = "both", trace = FALSE)
+summary(step.model)
+```
+
+
+```{r}
+test3$pred <- predict(step.model, newdata = test3, type = "response")
+View(test3)
+```
+
+```{r}
+test3$pred <- round(test3$pred)
+test3$Accuracy <- ifelse (test3$EWING == test3$pred, TRUE,
+                 ifelse (test3$EWING != test3$pred, FALSE,NA))
+```
+
+
+```{r}
+table(test3$Accuracy)
+```
+
+```{r}
+144 / (144 + 73)
+```
+
+
+
+
+```{r}
+library(dplyr)
+one <- filter(test, Accuracy == TRUE)
+two <- filter(test2, Accuracy == TRUE)
+three <- filter(test3, Accuracy == TRUE)
+View(one)
+View(two)
+View(three)
+```
+
+
+
+
+newdata1$rankP <- predict(mylogit, newdata = newdata1, type = "response")
+newdata1
+
+
+confusionMatrix(testData$ABOVE50K, predicted, threshold = optCutOff)
+
+
+

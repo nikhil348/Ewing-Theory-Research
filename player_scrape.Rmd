@@ -1,0 +1,142 @@
+---
+title: "data_scrape"
+author: "Nikhil Sharma"
+date: "7/1/2018"
+output: html_document
+---
+
+
+
+this one is important!!
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+devtools::install_github("rtelmore/ballr")
+```
+
+```{r}
+library(ballr)
+head(NBAPerGameAdvStatistics(season = 2005))
+```
+
+
+```{r}
+library(dplyr)
+
+
+datalist = list() 
+
+for (i in 1980:2018) { ##use package to grab per game advanced stats
+   
+    dat <- NBAPerGameAdvStatistics(season = i)
+    dat$i <- i  
+    datalist[[i]] <- dat 
+}
+
+advanced <- bind_rows(datalist)
+
+View(advanced)
+```
+
+
+```{r}
+datalist = list()
+
+for (i in 1980:2018) { ##use package to grab per game basic stats
+   
+    dat <- NBAPerGameStatistics(season = i)
+    dat$i <- i  
+    datalist[[i]] <- dat 
+}
+
+bigger_data <- bind_rows(datalist)
+
+View(basic)
+```
+
+```{r}
+basic <- bigger_data
+View(basic)
+```
+
+```{r}
+per_game_players <- cbind.data.frame(basic, advanced)
+View(per_game_players)
+```
+
+```{r}
+colnames(per_game_players)[c(8, 39)] <- c("mp_per_game","mp_total")
+View(per_game_players)
+```
+
+
+```{r}
+per_game_players2 <- per_game_players[,c(-24, -31:-38, -46, -52, -57, -60, -62)]
+View(per_game_players2)
+```
+
+
+```{r}
+write.csv(per_game_players2, file="regular_season_players.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+playoff data scrape below; will figure out later
+
+```{r}
+library("rvest")
+url <- "https://www.basketball-reference.com/playoffs/NBA_2018_totals.html"
+first <- url %>%
+  read_html() %>%
+  html_nodes(xpath='//*[@id="totals_stats"]') %>% html_table()
+first <- first [[1]]
+library(dplyr)
+first <- filter(first, Rk != "Rk")
+View(first)
+```
+
+
+```{r}
+library(rvest)
+datalist = list()
+
+for (i in 1950:2018) {
+url <- "https://www.basketball-reference.com/playoffs/NBA_ _totals.html"
+first <- url %>%
+  read_html() %>%
+  html_nodes(xpath='//*[@id="totals_stats"]') %>% html_table()
+first <- first [[1]]
+library(dplyr)
+first <- filter(first, Rk != "Rk")
+
+first$i <- i  
+datalist[[i]] <- first 
+}
+
+big_data = do.call(rbind, datalist)
+
+```
+
+
+
+
+
