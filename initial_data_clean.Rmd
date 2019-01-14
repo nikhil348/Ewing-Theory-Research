@@ -522,3 +522,4 @@ candidates_df$EWING <- ifelse (candidates_df$Percentage.x < candidates_df$Percen
 write.csv(candidates_df, file="candidates_denoted2.csv")
 ```
 
+ 
